@@ -8,8 +8,6 @@ RUN npm ci --omit=dev
 
 COPY src/ ./src/
 
-COPY sha3_wasm_bg.wasm ./
-
 ENV NODE_ENV=production
 
 EXPOSE 3000

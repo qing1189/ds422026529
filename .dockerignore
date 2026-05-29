@@ -10,8 +10,6 @@ npm-debug.log
 .pm2
 __pycache__
 *.png
-*.wasm
-!sha3_wasm_bg.wasm
 deploy.tar.gz
 42w-portal-patch/
 pow_js_worker.js
