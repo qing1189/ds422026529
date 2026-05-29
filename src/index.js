@@ -26,7 +26,7 @@ app.use(requestLogger);
 app.use((req, res, next) => {
   const apiKey = process.env.API_KEY;
   if (!apiKey) return next();
-  if (req.method === 'GET' && req.path === '/admin') return next();
+  if (req.method === 'GET' && (req.path === '/admin' || req.path.startsWith('/admin/'))) return next();
 
   const auth = req.headers['authorization'];
   if (auth === `Bearer ${apiKey}`) return next();
