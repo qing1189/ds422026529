@@ -1,0 +1,14 @@
+node_modules/
+.env
+.pm2/
+sha3_wasm_bg.wasm
+__pycache__/
+*.png
+*.wasm
+deploy.tar.gz
+42w-portal-patch/
+pow_js_worker.js
+pow_wasm_worker.js
+tmp_main.js
+tmp_js_worker.js
+tmp_wasm_worker.js
