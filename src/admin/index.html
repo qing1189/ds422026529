@@ -183,6 +183,16 @@ td { font-family: 'SF Mono', 'Consolas', monospace; font-size: 0.85em; }
   cursor: pointer;
 }
 .btn:hover { opacity: 0.85; }
+.btn-remove {
+  background: var(--red);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 0.8em;
+  cursor: pointer;
+}
+.btn-remove:hover { opacity: 0.85; }
 .msg {
   font-size: 0.82em;
   margin-top: 6px;
@@ -304,10 +314,10 @@ footer {
     <div style="overflow-x:auto">
       <table>
         <thead>
-          <tr><th>令牌</th><th>视觉能力</th><th>错误数</th><th>活跃/最大</th><th>健康</th></tr>
+          <tr><th>令牌</th><th>视觉能力</th><th>错误数</th><th>活跃/最大</th><th>健康</th><th>操作</th></tr>
         </thead>
         <tbody id="poolBody">
-          <tr><td colspan="5" class="loading">加载中...</td></tr>
+          <tr><td colspan="6" class="loading">加载中...</td></tr>
         </tbody>
       </table>
     </div>
@@ -512,7 +522,7 @@ function render(data) {
   // Token pool
   const poolBody = $('poolBody');
   if (data.pool.length === 0) {
-    poolBody.innerHTML = '<tr><td colspan="5" style="color:var(--text-dim)">无令牌</td></tr>';
+    poolBody.innerHTML = '<tr><td colspan="6" style="color:var(--text-dim)">无令牌 - 请在下方添加</td></tr>';
   } else {
     poolBody.innerHTML = data.pool.map(t => `<tr>
       <td>${t.token}</td>
@@ -520,6 +530,7 @@ function render(data) {
       <td>${t.errorCount}</td>
       <td>${t.activeRequests} / ${t.maxConcurrent}</td>
       <td>${healthDot(t.errorCount, t.activeRequests, t.maxConcurrent)}</td>
+      <td><button class="btn-remove" onclick="removeToken('${t.token}')" title="删除">删除</button></td>
     </tr>`).join('');
   }
 
@@ -650,6 +661,28 @@ $('loginForm').addEventListener('submit', async e => {
 // Init
 fetchStats();
 setupRefresh();
+
+// Remove token function
+async function removeToken(token) {
+  if (!confirm('确定要删除此令牌吗？')) return;
+  try {
+    const res = await apiFetch('/admin/api/token/remove', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      fetchStats();
+    } else {
+      alert('删除失败: ' + (data.error?.message || '未知错误'));
+    }
+  } catch (err) {
+    if (err.message !== 'unauthorized') {
+      alert('删除失败: ' + err.message);
+    }
+  }
+}
 </script>
 </body>
 </html>

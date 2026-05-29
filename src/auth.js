@@ -45,9 +45,7 @@ function generateDeviceId() {
   return Buffer.from(bytes).toString('base64').replace(/=/g, '') + '==';
 }
 
-if (tokens.length === 0 && accounts.length === 0) {
-  throw new Error('No DS_TOKEN/DS_TOKENS or DS_ACCOUNTS configured');
-}
+// Allow empty pool — tokens can be added via web UI later
 
 // DS_ACCOUNTS_EXTENDED=email:password:token_prefix — links existing tokens to accounts
 function loadAccountTokens() {
@@ -193,6 +191,11 @@ async function refreshToken(entry) {
 }
 
 export async function initTokenPool() {
+  if (tokenPool.length === 0) {
+    console.log('Token pool: empty — add tokens via web UI at /admin');
+    return;
+  }
+
   console.log(`Token pool: ${tokenPool.length} entries (${tokens.length} tokens + ${accounts.length} accounts), max ${MAX_CONCURRENT_PER_TOKEN} concurrent each`);
 
   // Validate existing tokens, mark dead ones (auto-refresh if account linked)
@@ -385,21 +388,19 @@ export async function loginAndAddToken(email, password) {
 
 function persistTokensToEnv() {
   try {
-    let content = readFileSync(ENV_PATH, 'utf-8');
-    const aliveTokens = tokenPool.filter(t => t.token && !t.dead).map(t => t.token);
-    if (aliveTokens.length === 0) return;
-
-    const line = `DS_TOKENS=${aliveTokens.join(',')}`;
-    const lines = content.split(/\r?\n/);
-    let found = false;
-    for (let i = 0; i < lines.length; i++) {
-      if (lines[i].startsWith('DS_TOKENS=')) {
-        lines[i] = line;
-        found = true;
-        break;
-      }
+    let content = '';
+    try {
+      content = readFileSync(ENV_PATH, 'utf-8');
+    } catch {
+      // .env file doesn't exist, create it
     }
-    if (!found) lines.push(line);
+
+    const aliveTokens = tokenPool.filter(t => t.token && !t.dead).map(t => t.token);
+    const lines = content.split(/\r?\n/).filter(line => !line.startsWith('DS_TOKENS='));
+
+    if (aliveTokens.length > 0) {
+      lines.push(`DS_TOKENS=${aliveTokens.join(',')}`);
+    }
 
     writeFileSync(ENV_PATH, lines.join('\n'));
   } catch (err) {
@@ -485,4 +486,34 @@ export function getAliveTokens() {
 
 export function getTotalCapacity() {
   return tokenPool.filter(t => !t.dead && t.token).length * MAX_CONCURRENT_PER_TOKEN;
+}
+
+export function removeTokenFromPool(tokenStr) {
+  const trimmed = tokenStr.trim();
+  const idx = tokenPool.findIndex(t => t.token === trimmed);
+  if (idx === -1) return false;
+  tokenPool.splice(idx, 1);
+  persistTokensToEnv();
+  return true;
+}
+
+export function removeAccountFromPool(email) {
+  const idx = tokenPool.findIndex(t => t.email === email);
+  if (idx === -1) return false;
+  tokenPool.splice(idx, 1);
+  persistTokensToEnv();
+  return true;
+}
+
+export function getFullPoolInfo() {
+  return tokenPool.map(t => ({
+    token: t.token ? t.token.slice(0, 12) + '...' : 'NONE',
+    fullToken: t.token || null,
+    email: t.email || null,
+    visionCapable: t.visionCapable,
+    errorCount: t.errorCount,
+    activeRequests: t.activeRequests,
+    dead: t.dead,
+    maxConcurrent: MAX_CONCURRENT_PER_TOKEN,
+  }));
 }

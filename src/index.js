@@ -2,7 +2,7 @@ import { config } from 'dotenv';
 config();
 
 import express from 'express';
-import { initTokenPool, getPoolInfo, getTotalCapacity, addTokenToPool, loginAndAddToken, getAliveTokens, startHealthCheck } from './auth.js';
+import { initTokenPool, getPoolInfo, getFullPoolInfo, getTotalCapacity, addTokenToPool, loginAndAddToken, getAliveTokens, startHealthCheck, removeTokenFromPool, removeAccountFromPool } from './auth.js';
 import { prewarmSessions, getSessionInfo } from './session.js';
 import { handleOpenAICompletion, handleOpenAIModels } from './openai.js';
 import { handleDeepSeekCompletion } from './deepseek.js';
@@ -100,6 +100,28 @@ app.post('/admin/api/token/login', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: { message: err.message } });
   }
+});
+
+app.post('/admin/api/token/remove', (req, res) => {
+  const { token } = req.body;
+  if (!token || typeof token !== 'string') {
+    return res.status(400).json({ error: { message: 'token required' } });
+  }
+  const removed = removeTokenFromPool(token);
+  res.json({ success: removed });
+});
+
+app.post('/admin/api/account/remove', (req, res) => {
+  const { email } = req.body;
+  if (!email || typeof email !== 'string') {
+    return res.status(400).json({ error: { message: 'email required' } });
+  }
+  const removed = removeAccountFromPool(email);
+  res.json({ success: removed });
+});
+
+app.get('/admin/api/pool', (req, res) => {
+  res.json({ pool: getFullPoolInfo(), totalCapacity: getTotalCapacity() });
 });
 
 app.listen(PORT, async () => {
